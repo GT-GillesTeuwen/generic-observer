@@ -1,51 +1,27 @@
 use generic_observer_macros::notify;
+use std::sync::{Arc, Mutex};
 
-// Define the macro and other necessary setups in scope
 #[notify]
-struct Character {
-    health: i32,
-    mana: i32,
-    experience: i32,
+struct Cell {
+    name:String,
+    value: i32,
 }
 
 fn main() {
-    let mut hero = Character::new(100, 50, 0); // Initial stats: health, mana, experience
+    let mut cell_a = Cell::new("a".to_string(),10);
 
-    register_all_observers(&mut hero);
+    let cell_b = Arc::new(Mutex::new(Cell::new("b".to_string(),2*cell_a.value)));
+    let cell_b_clone = Arc::clone(&cell_b);
 
-    // Simulate a battle scenario
-    hero.set_health(hero.health - 30); // Hero takes damage
-    hero.set_mana(hero.mana - 20); // Hero casts a spell
-    hero.set_experience(hero.experience + 50); // Hero gains some experience
-
-    // Simulate a battle scenario
-    hero.set_health(hero.health - 30); // Hero takes damage
-    hero.set_mana(hero.mana - 20); // Hero casts a spell
-    hero.set_experience(hero.experience + 50); // Hero gains some experience
-
-    hero.set_health(0);
-}
-
-fn register_all_observers(hero: &mut Character) {
-    // Register an observer for the health field
-    hero.register_health_observer(Box::new(|c| {
-        if c.health <= 0 {
-            println!("{} has died.", "Hero"); // Customizing the message
-        } else {
-            println!("Hero's health is now: {}", c.health);
-        }
+    cell_a.register_value_observer(Box::new(move |c| {
+        
+        let mut cell_b_locked = cell_b_clone.lock().unwrap();
+        cell_b_locked.value = c.value * 2;
+        println!("Cell a is {} so updated cell b to {}",c.value,cell_b_locked.value);
     }));
 
-    // Register an observer for the mana field
-    hero.register_mana_observer(Box::new(|c| {
-        println!("Hero's mana is now: {}", c.mana);
-    }));
+    // Update cell_a
+    cell_a.set_value(15);
 
-    // Register an observer for the experience field
-    hero.register_experience_observer(Box::new(|c| {
-        println!("Hero gained experience, now has: {}", c.experience);
-        if c.experience >= 100 {
-            println!("Hero has leveled up!");
-        }
-    }));
+    cell_a.set_value(2);
 }
