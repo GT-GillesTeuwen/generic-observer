@@ -1,5 +1,5 @@
 use generic_observer_macros::notify;
-use std::sync::{Arc, Mutex};
+use std::{borrow::Borrow, sync::{Arc, Mutex}};
 
 #[notify]
 struct Cell {
@@ -17,11 +17,15 @@ fn main() {
     cell_a.register_value_observer(Box::new(move |c| {
         let mut cell_b_locked = cell_b_clone.lock().unwrap();
         cell_b_locked.value = c.value * 2;
-        println!("Cell {} is {} so updated cell {} to {}",c.name,c.value,cell_b_locked.name, cell_b_locked.value);
+        println!("cell_{} is {} so updated cell_{} to {}",c.name,c.value,cell_b_locked.name, cell_b_locked.value);
     })); //register observer with functionality to fire when a change is detected
 
-    // Update cell_a to check if cell b gets changed
+    // Update cell_a to check if cell_b gets changed
     cell_a.set_value(15);
-
+    // Update cell_a to check if cell_b gets changed
     cell_a.set_value(2);
+    // Update cell_a to check if cell_b gets changed
+    cell_a.set_value(-100);
+
+    println!("\ncell_b's final value: {}",cell_b_arc_mutex.lock().unwrap().value); //Proving that the changes are applied everywhere
 }
