@@ -4,7 +4,7 @@ use std::hash::{Hash, Hasher};
 
 // Define the Observer trait
 trait Observer {
-    fn update(&self, value: i32, colour: &str, name: &str);
+    fn update(&self, value: i32, colour: &str, name: &str, id: usize);
 }
 
 // A structure to hold Observer references
@@ -55,7 +55,7 @@ impl Cell {
 
     // Method to remove an observer
     fn remove_observer(&self, id: usize) {
-        let temp_handle = ObserverHandle { id, callback: Arc::new(PrintObserver {}) };  // Dummy observer for removal
+        let temp_handle = ObserverHandle { id, callback: Arc::new(DummyObserver {}) };  // Dummy observer for removal
         self.observers.lock().unwrap().remove(&temp_handle);
     }
 
@@ -69,8 +69,17 @@ impl Cell {
     fn notify(&self) {
         let observers = self.observers.lock().unwrap();
         for observer in observers.iter() {
-            observer.callback.update(self.value, &self.colour, &self.name);
+            observer.callback.update(self.value, &self.colour, &self.name, observer.id);
         }
+    }
+}
+
+// Dummy Observer for removal
+struct DummyObserver;
+
+impl Observer for DummyObserver {
+    fn update(&self, _value: i32, _colour: &str, _name: &str, _id: usize) {
+        // No action needed
     }
 }
 
@@ -78,21 +87,32 @@ impl Cell {
 struct PrintObserver;
 
 impl Observer for PrintObserver {
-    fn update(&self, value: i32, colour: &str, name: &str) {
-        println!("{}cell_{} value changed to {}\x1b[0m", colour,name, value);
+    fn update(&self, value: i32, colour: &str, name: &str, id: usize) {
+        println!("{}cell_{} value changed to {} - Observer ID:{}\x1b[0m", colour, name, value, id);
     }
 }
 
 fn main() {
     let cell_a = Arc::new(Mutex::new(Cell::new("a".to_string(), 10, "\x1b[91m".to_string())));
     let observer = Arc::new(PrintObserver {});
-    
+
+    // Clone the observer before passing it to add_observer
     cell_a.lock().unwrap().add_observer(observer.clone(), 1);
 
     cell_a.lock().unwrap().set_value(15);
     cell_a.lock().unwrap().set_value(2);
 
+    // Remove observer ID 1
     cell_a.lock().unwrap().remove_observer(1);
-    cell_a.lock().unwrap().add_observer(observer, 2);
+
+    // Re-add observer with a different ID
+    cell_a.lock().unwrap().add_observer(observer.clone(), 2);
+
     cell_a.lock().unwrap().set_value(-100);
+
+    // Add the same observer with another ID
+    cell_a.lock().unwrap().add_observer(observer.clone(), 3);
+    
+    cell_a.lock().unwrap().set_value(100);
 }
+
