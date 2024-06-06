@@ -144,8 +144,7 @@ pub fn notify(_attr: TokenStream, item: TokenStream) -> TokenStream {
                     });
 
                     new_values.push(quote! { #field_name });
-
-                    
+ 
                 }
                 new_params.push(quote! { #field_name: #field_type });
             }
