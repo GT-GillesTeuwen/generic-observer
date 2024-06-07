@@ -1,30 +1,43 @@
-// Requires observers to be wrapped in lock and shared pointer type
-
 use std::sync::{Arc, Mutex};
+use std::collections::HashMap;
 
 pub trait Observe<T> {
     fn observe(&mut self, event: &T);
 }
 
-pub type Observer<T> = Arc<Mutex<dyn Observe<T>>>;
+// Observer with an ID
+pub struct ObserverHandle<T> {
+    id: usize,
+    observer: Arc<Mutex<dyn Observe<T> + Send + Sync>>,
+}
 
 #[derive(Default)]
-pub struct Observers<T>(Vec<Observer<T>>);
+pub struct Observers<T> {
+    observers: HashMap<usize, ObserverHandle<T>>,
+    next_id: usize,
+}
 
 impl<T: 'static> Observers<T> {
     pub fn notify(&self, event: &T) {
-        for observer_handle in self.0.clone() {
-            let mut observer = observer_handle
-                .lock()
-                .expect("Failed to acquire observer lock!");
-            observer.observe(&event);
+        for observer_handle in self.observers.values() {
+            if let Ok(mut observer) = observer_handle.observer.lock() {
+                observer.observe(event);
+            }
         }
     }
 
-    pub fn add_observer(&mut self, observer: Observer<T>) {
-        self.0.push(observer);
+    pub fn add_observer(&mut self, observer: Arc<Mutex<dyn Observe<T> + Send + Sync>>) -> usize {
+        let id = self.next_id;
+        self.observers.insert(id, ObserverHandle { id, observer });
+        self.next_id += 1;
+        id
+    }
+
+    pub fn remove_observer(&mut self, id: usize) {
+        self.observers.remove(&id);
     }
 }
+
 
 // Usage
 pub enum CellEvent {
@@ -95,12 +108,14 @@ pub fn main() {
     a.name="a".to_string();
     let b =  Arc::new(Mutex::new(Cell::default()));
     b.lock().unwrap().name="b".to_string();
-    b.lock().unwrap().observers.add_observer(clone);
-    a.observers.add_observer(b);
+    let id1 = b.lock().unwrap().observers.add_observer(clone);
+    let id2 = a.observers.add_observer(b);
    
-    a.observers.add_observer(cell_fanatic);
+    let id3 = a.observers.add_observer(cell_fanatic);
    
     a.update(2);
+
+    a.observers.remove_observer(id1);
     println!("\n");
     a.update(10);
 }
