@@ -1,34 +1,28 @@
 use std::sync::{Arc, Mutex};
 use std::collections::HashMap;
 
-pub trait Observe<T> {
-    fn observe(&mut self, event: &T);
+pub trait Observer<T> {
+    fn update(&mut self, event: &T);
 }
 
-// Observer with an ID
-pub struct ObserverHandle<T> {
-    id: usize,
-    observer: Arc<Mutex<dyn Observe<T> + Send + Sync>>,
-}
 
 #[derive(Default)]
-pub struct Observers<T> {
-    observers: HashMap<usize, ObserverHandle<T>>,
+pub struct ObserverManager<T> {
+    observers: HashMap<usize, Arc<Mutex<dyn Observer<T> + Send + Sync>>>,
     next_id: usize,
 }
 
-impl<T: 'static> Observers<T> {
+impl<T: 'static> ObserverManager<T> {
     pub fn notify(&self, event: &T) {
-        for observer_handle in self.observers.values() {
-            if let Ok(mut observer) = observer_handle.observer.lock() {
-                observer.observe(event);
-            }
+        for observer in self.observers.values() {
+            observer.lock().unwrap().update(event);
+            
         }
     }
 
-    pub fn add_observer(&mut self, observer: Arc<Mutex<dyn Observe<T> + Send + Sync>>) -> usize {
+    pub fn add_observer(&mut self, observer: Arc<Mutex<dyn Observer<T> + Send + Sync>>) -> usize {
         let id = self.next_id;
-        self.observers.insert(id, ObserverHandle { id, observer });
+        self.observers.insert(id, observer );
         self.next_id += 1;
         id
     }
@@ -38,6 +32,13 @@ impl<T: 'static> Observers<T> {
     }
 }
 
+pub trait Subject<T> {
+    fn notify(&self, event: &T);
+
+    fn add_observer(&mut self, observer: Arc<Mutex<dyn Observer<T> + Send + Sync>>) -> usize ;
+
+    fn remove_observer(&mut self, id: usize);
+}
 
 // Usage
 pub enum CellEvent {
@@ -54,23 +55,37 @@ impl Default for CellEvent {
 pub struct Cell {
     pub name: String,
     pub value:i32,
-    pub observers: Observers<CellEvent>,
+    pub observer_manager: ObserverManager<CellEvent>,
 }
 
 impl Cell {
-    pub fn update(&mut self,val:i32) {
+    pub fn set_value(&mut self,val:i32) {
         self.value=val;
         println!("cell_{} value is now {}",self.name,self.value);
-        self.observers.notify(&CellEvent::Updated(self.value));
+        self.observer_manager.notify(&CellEvent::Updated(self.value));
     }
 
 }
 
+impl Subject<CellEvent> for Cell {
+    fn notify(&self, event: &CellEvent) {
+        self.observer_manager.notify(event);
+    }
 
-impl Observe<CellEvent> for Cell {
-    fn observe(&mut self, event: &CellEvent) {
+    fn add_observer(&mut self, observer: Arc<Mutex<dyn Observer<CellEvent> + Send + Sync>>) -> usize {
+        self.observer_manager.add_observer(observer)
+    }
+
+    fn remove_observer(&mut self, id: usize) {
+        self.observer_manager.remove_observer(id)
+    }
+}
+
+
+impl Observer<CellEvent> for Cell {
+    fn update(&mut self, event: &CellEvent) {
         match event {
-            CellEvent::Updated(val) => self.update(2*val),
+            CellEvent::Updated(val) => self.set_value(2*val),
         }
     }
 }
@@ -91,8 +106,8 @@ impl CellFanatic {
     }
 }
 
-impl Observe<CellEvent> for CellFanatic{
-    fn observe(&mut self, event: &CellEvent) {
+impl Observer<CellEvent> for CellFanatic{
+    fn update(&mut self, event: &CellEvent) {
         match event {
             CellEvent::Updated(val) => {self.increment_updates(); self.add_to_total(val)}
         }
@@ -108,14 +123,14 @@ pub fn main() {
     a.name="a".to_string();
     let b =  Arc::new(Mutex::new(Cell::default()));
     b.lock().unwrap().name="b".to_string();
-    let id1 = b.lock().unwrap().observers.add_observer(clone);
-    let id2 = a.observers.add_observer(b);
+    let id1 = b.lock().unwrap().add_observer(clone);
+    let id2 = a.add_observer(b);
    
-    let id3 = a.observers.add_observer(cell_fanatic);
+    let id3 = a.add_observer(cell_fanatic);
    
-    a.update(2);
+    a.set_value(2);
 
-    a.observers.remove_observer(id1);
+    a.remove_observer(id3);
     println!("\n");
-    a.update(10);
+    a.set_value(10);
 }

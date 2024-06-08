@@ -9,6 +9,9 @@ path = "src/main.rs"
 name = "normal-observer"
 path = "src/main_normal.rs"
 
+[[bin]]
+name = "gof-observer"
+path = "src/gof_observer.rs"
 
 [dependencies]
 generic-observer-macros = { path = "./generic-observer-macros" }
