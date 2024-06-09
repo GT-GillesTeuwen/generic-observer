@@ -1,8 +1,7 @@
-use generic_observer_macros::selective_notify;
 use generic_observer_macros::notify;
 use std::sync::{Arc, Mutex};
 
-#[selective_notify(value,colour)]
+#[notify]
 struct Cell {
     name:String,
     value: i32,
@@ -40,25 +39,25 @@ pub fn main() {
      let c_f_clone_1=Arc::clone(&c_f_am);
      let c_f_clone_2=Arc::clone(&c_f_am);
 
-    cell_a.register_value_observer(Box::new(move |c| {
+    cell_a.register_observer(Box::new(move |c| {
         println!("{}cell_{} is now {}\x1b[0m",c.colour,c.name,c.value);
     })); //register to print when a is changed
 
-    cell_a.register_value_observer(Box::new(move |c| {
+    cell_a.register_observer(Box::new(move |c| {
         let mut locked=c_f_clone_1.lock().unwrap();
         locked.increment_updates();
     })); //increment cell fanatic's number of updates
 
-    cell_a.register_value_observer(Box::new(move |c| {
+    cell_a.register_observer(Box::new(move |c| {
         let mut cell_b_locked = cell_b_clone.lock().unwrap();
         cell_b_locked.set_value(c.value * 2);
     })); //register observer to update b when a is changed
 
-    cell_b_arc_mutex.lock().unwrap().register_value_observer(Box::new(move |c| {
+    cell_b_arc_mutex.lock().unwrap().register_observer(Box::new(move |c| {
         println!("{}cell_{} is now {}\x1b[0m",c.colour,c.name,c.value);
     })); //register to print when b is changed
 
-    cell_b_arc_mutex.lock().unwrap().register_value_observer(Box::new(move |c| {
+    cell_b_arc_mutex.lock().unwrap().register_observer(Box::new(move |c| {
         let mut locked=c_f_clone_2.lock().unwrap();
         locked.add_to_total(c);
     })); // add to cell fanatics total

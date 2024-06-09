@@ -92,7 +92,7 @@ impl Observer for PrintObserver {
     }
 }
 
-fn main() {
+pub fn main() {
     let cell_a = Arc::new(Mutex::new(Cell::new("a".to_string(), 10, "\x1b[91m".to_string())));
     let observer = Arc::new(PrintObserver {});
 
