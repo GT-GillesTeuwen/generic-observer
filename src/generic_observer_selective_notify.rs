@@ -43,7 +43,7 @@ pub fn main() {
         println!("{}cell_{} is now {}\x1b[0m",c.colour,c.name,c.value);
     })); //register to print when a is changed
 
-    cell_a.register_value_observer(Box::new(move |c| {
+    cell_a.register_value_observer(Box::new(move |_c| {
         let mut locked=c_f_clone_1.lock().unwrap();
         locked.increment_updates();
     })); //increment cell fanatic's number of updates

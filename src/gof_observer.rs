@@ -123,8 +123,8 @@ pub fn main() {
     a.name="a".to_string();
     let b =  Arc::new(Mutex::new(Cell::default()));
     b.lock().unwrap().name="b".to_string();
-    let id1 = b.lock().unwrap().add_observer(clone);
-    let id2 = a.add_observer(b);
+    let _id1 = b.lock().unwrap().add_observer(clone);
+    let _id2 = a.add_observer(b);
    
     let id3 = a.add_observer(cell_fanatic);
    

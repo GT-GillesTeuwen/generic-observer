@@ -1,17 +1,25 @@
 [package]
-name = "generic-observer"
+name = "main"
 version = "0.1.0"
 edition = "2021"
 resolver = "2"
 path = "src/main.rs"
 
 [[bin]]
-name = "normal-observer"
-path = "src/main_normal.rs"
+name = "initial-observer"
+path = "src/initial_observer.rs"
 
 [[bin]]
 name = "gof-observer"
 path = "src/gof_observer.rs"
+
+[[bin]]
+name = "generic_notify-observer"
+path = "src/generic_observer_notify.rs"
+
+[[bin]]
+name = "generic-selective-observer"
+path = "src/generic_observer_selective_notify.rs"
 
 [dependencies]
 generic-observer-macros = { path = "./generic-observer-macros" }
